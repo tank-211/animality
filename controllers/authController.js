@@ -105,6 +105,9 @@ exports.logout = (req, res) => {
 
 exports.getCurrentUser = async (req, res) => {
   try {
+
+    console.log("USER ID:", req.userId);
+
     const user = await prisma.user.findUnique({
       where: { id: req.userId },
       select: {
@@ -120,6 +123,14 @@ exports.getCurrentUser = async (req, res) => {
         state: true
       }
     });
+
+    res.json(user);
+
+  } catch (error) {
+    console.error("GET CURRENT USER ERROR:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
 
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
