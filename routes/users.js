@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const userController = require('../controllers/userController');
-const { authMiddleware, adminMiddleware } = require('../middleware/auth');
+const { authMiddleware, adminMiddleware } = require('../middleware/authMiddleware');
 
 // Admin routes
 router.get('/pet-parents', authMiddleware, adminMiddleware, userController.getPetParents);

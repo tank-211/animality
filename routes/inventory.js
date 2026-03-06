@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const inventoryController = require('../controllers/inventoryController');
-const { authMiddleware, adminMiddleware } = require('../middleware/auth');
+const { authMiddleware, adminMiddleware } = require('../middleware/authMiddleware');
 
 // Get inventory (public)
 router.get('/', inventoryController.getInventory);
