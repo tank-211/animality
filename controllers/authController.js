@@ -105,20 +105,11 @@ exports.logout = (req, res) => {
 
 exports.getCurrentUser = async (req, res) => {
   try {
+
+    console.log("USER ID FROM TOKEN:", req.userId);
+
     const user = await prisma.user.findUnique({
-      where: { id: req.userId },
-      select: {
-        id: true,
-        email: true,
-        firstName: true,
-        lastName: true,
-        role: true,
-        subscriptionTier: true,
-        phone: true,
-        address: true,
-        city: true,
-        state: true
-      }
+      where: { id: req.userId }
     });
 
     if (!user) {
@@ -129,6 +120,6 @@ exports.getCurrentUser = async (req, res) => {
 
   } catch (error) {
     console.error("GET CURRENT USER ERROR:", error);
-    res.status(500).json({ error: "Failed to fetch user" });
+    res.status(500).json({ error: error.message });
   }
 };
