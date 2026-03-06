@@ -1,0 +1,274 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  PET_PARENT
+}
+
+enum SubscriptionTier {
+  FREE
+  BASIC
+  PREMIUM
+  ENTERPRISE
+}
+
+enum VaccinationStatus {
+  UP_TO_DATE
+  OVERDUE
+  PENDING
+  NOT_VACCINATED
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum InquiryStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+model User {
+  id                String    @id @default(uuid())
+  email             String    @unique
+  firstName         String
+  lastName          String
+  password          String
+  phone             String?
+  address           String?
+  city              String?
+  state             String?
+  zipCode           String?
+  country           String?
+  role              UserRole
+  subscriptionTier  SubscriptionTier @default(FREE)
+  subscriptionStartDate DateTime?
+  subscriptionEndDate DateTime?
+  profileImage      String?
+  isActive          Boolean   @default(true)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  
+  // Relations
+  pets              Pet[]
+  orders            Order[]
+  documents         Document[]
+  inquiries         Inquiry[]
+  payments          Payment[]
+  
+  @@index([email])
+  @@index([role])
+}
+
+model Pet {
+  id                String    @id @default(uuid())
+  petName           String
+  animalVariety     String    // Dog, Cat, Bird, etc.
+  breed             String
+  dateOfBirth       DateTime
+  vaccinationStatus VaccinationStatus @default(NOT_VACCINATED)
+  breederName       String?
+  parentId          String?   // NULL if pet is in shop
+  price             Float?    // For pets in shop
+  isAvailableForSale Boolean   @default(false)
+  isShopPet         Boolean   @default(false)
+  description       String?   // For shop pets
+  imageUrl          String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  
+  // Relations
+  parent            User?     @relation(fields: [parentId], references: [id], onDelete: SetNull)
+  documents         PetDocument[]
+  orders            Order[]   @relation("PetOrders")
+  vaccinationAlerts VaccinationAlert[]
+  
+  @@index([parentId])
+  @@index([isAvailableForSale])
+  @@index([isShopPet])
+}
+
+model PetDocument {
+  id                String    @id @default(uuid())
+  petId             String
+  documentType      String    // KCI_CERT, MUNICIPAL_CERT, VAC_CARD, OTHER
+  documentUrl       String
+  uploadedDate      DateTime  @default(now())
+  
+  // Relations
+  pet               Pet       @relation(fields: [petId], references: [id], onDelete: Cascade)
+  
+  @@index([petId])
+}
+
+model VaccinationAlert {
+  id                String    @id @default(uuid())
+  petId             String    @unique
+  lastVaccinatedDate DateTime?
+  nextVaccinationDue DateTime
+  isAlert           Boolean   @default(false)
+  alertSentDate     DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  
+  // Relations
+  pet               Pet       @relation(fields: [petId], references: [id], onDelete: Cascade)
+  
+  @@index([petId])
+  @@index([isAlert])
+}
+
+model InventoryItem {
+  id                String    @id @default(uuid())
+  name              String
+  category          String    // PET_FOOD, ACCESSORIES
+  description       String?
+  price             Float
+  quantity          Int       @default(0)
+  sku               String    @unique
+  imageUrl          String?
+  isActive          Boolean   @default(true)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  
+  // Relations
+  orderItems        OrderItem[]
+  
+  @@index([category])
+  @@index([isActive])
+}
+
+model Order {
+  id                String    @id @default(uuid())
+  userId            String
+  orderNumber       String    @unique
+  totalAmount       Float
+  tax               Float     @default(0)
+  shippingCost      Float     @default(0)
+  status            OrderStatus @default(PENDING)
+  shippingAddress   String
+  trackingNumber    String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  deliveredAt       DateTime?
+  
+  // Relations
+  user              User      @relation(fields: [userId], references: [id])
+  items             OrderItem[]
+  pets              Pet[]     @relation("PetOrders")
+  payment           Payment?
+  
+  @@index([userId])
+  @@index([status])
+  @@index([orderNumber])
+}
+
+model OrderItem {
+  id                String    @id @default(uuid())
+  orderId           String
+  inventoryItemId   String?
+  quantity          Int
+  unitPrice         Float
+  totalPrice        Float
+  
+  // Relations
+  order             Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  inventoryItem     InventoryItem? @relation(fields: [inventoryItemId], references: [id])
+  
+  @@index([orderId])
+  @@index([inventoryItemId])
+}
+
+model Payment {
+  id                String    @id @default(uuid())
+  userId            String
+  orderId           String    @unique
+  amount            Float
+  currency          String    @default("USD")
+  status            PaymentStatus @default(PENDING)
+  paymentMethod     String
+  stripePaymentId   String?
+  invoice           String?
+  receiptUrl        String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  
+  // Relations
+  user              User      @relation(fields: [userId], references: [id])
+  order             Order     @relation(fields: [orderId], references: [id])
+  
+  @@index([userId])
+  @@index([orderId])
+  @@index([status])
+}
+
+model Document {
+  id                String    @id @default(uuid())
+  userId            String
+  documentType      String
+  documentUrl       String
+  uploadedDate      DateTime  @default(now())
+  
+  // Relations
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+}
+
+model Inquiry {
+  id                String    @id @default(uuid())
+  userId            String
+  subject           String
+  message           String
+  status            InquiryStatus @default(OPEN)
+  priority          String    @default("MEDIUM") // LOW, MEDIUM, HIGH
+  adminNotes        String?
+  attachmentUrl     String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  resolvedAt        DateTime?
+  
+  // Relations
+  user              User      @relation(fields: [userId], references: [id])
+  
+  @@index([userId])
+  @@index([status])
+  @@index([priority])
+}
+
+model Analytics {
+  id                String    @id @default(uuid())
+  totalPetsSold     Int       @default(0)
+  petsInShop        Int       @default(0)
+  foodInventorySold Int       @default(0)
+  foodInventoryInStock Int    @default(0)
+  accessoriesSold   Int       @default(0)
+  accessoriesInStock Int      @default(0)
+  totalRevenue      Float     @default(0)
+  totalOrders       Int       @default(0)
+  activeUsers       Int       @default(0)
+  updatedAt         DateTime  @updatedAt
+}
